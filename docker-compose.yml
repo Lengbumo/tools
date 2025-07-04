@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  web:
+    image: ghcr.io/lengbumo/tools:latest
+    ports:
+      - "8999:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8999 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.docker.compose.project=tools"
+      - "com.docker.compose.service=web"
