@@ -1,0 +1,35 @@
+{
+    "name": "tools",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite --port 3000",
+        "build": "vite build",
+        "preview": "vite preview",
+        "docker:build": "docker-compose build",
+        "docker:dev": "docker-compose up -d",
+        "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+        "docker:stop": "docker-compose down",
+        "docker:logs": "docker-compose logs -f",
+        "docker:clean": "docker system prune -a -f"
+    },
+    "dependencies": {
+        "@element-plus/icons-vue": "^2.3.1",
+        "codemirror": "^5.65.18",
+        "codemirror-editor-vue3": "^2.8.0",
+        "croner": "^9.1.0",
+        "element-plus": "^2.9.6",
+        "jsonlint": "^1.6.3",
+        "pdfjs-dist": "^3.11.174",
+        "qrcode": "^1.5.4",
+        "tesseract.js": "^6.0.0",
+        "vue": "^3.5.13",
+        "vue-json-pretty": "^2.4.0",
+        "vue-router": "^4.5.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^5.2.1",
+        "vite": "^6.2.1"
+    }
+}

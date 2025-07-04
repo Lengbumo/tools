@@ -1,0 +1,19 @@
+services:
+  web:
+    build: .
+    container_name: tools-web
+    ports:
+      - "8999:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - tools-network
+
+networks:
+  tools-network:
+    driver: bridge
+
+volumes:
+  traefik-ssl-certs:
+    driver: local
