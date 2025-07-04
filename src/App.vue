@@ -2,9 +2,15 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import QrCodeIcon from '@/components/icons/QrCodeIcon.vue'
+import GitHubIcon from '@/components/icons/GitHubIcon.vue'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)
+
+// GitHub 跳转处理
+const handleGitHubClick = () => {
+  window.open('https://github.com/Lengbumo/tools', '_blank')
+}
 </script>
 
 <template>
@@ -12,8 +18,16 @@ const activeMenu = computed(() => route.path)
     <!-- 侧边栏 -->
     <el-aside width="230px" class="sidebar">
       <div class="logo">
-        <el-icon><Tools /></el-icon>
-        <span>在线工具箱</span>
+        <div class="logo-content">
+          <el-icon><Tools /></el-icon>
+          <span>在线工具箱</span>
+        </div>
+        <div class="github-wrapper">
+          <el-icon class="github-icon" @click="handleGitHubClick">
+            <GitHubIcon />
+          </el-icon>
+          <span class="github-tooltip">follow</span>
+        </div>
       </div>
       
       <!-- 工具导航菜单 -->
@@ -159,11 +173,86 @@ body {
   color: #409eff;
   border-bottom: 1px solid #f0f0f0;
   background-color: #f8fafc;
+  justify-content: space-between;
 }
 
-.logo .el-icon {
+.logo-content {
+  display: flex;
+  align-items: center;
+}
+
+.logo-content .el-icon {
   margin-right: 10px;
   font-size: 24px;
+}
+
+.logo .github-icon {
+  --bg: #f7f7f8;
+  --hover-bg: #e6f4ff;
+  --hover-text: #1890ff;
+  font-size: 20px;
+  cursor: pointer;
+  background: var(--bg);
+  padding: 8px;
+  border-radius: 8px;
+  /* color: #606266; */
+  position: relative;
+  overflow: hidden;
+  transition: 0.3s cubic-bezier(0.6, 0.4, 0, 1), transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.logo .github-icon:hover {
+  background: var(--hover-bg);
+  color: var(--hover-text);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.logo .github-icon:active {
+  transform: scale(0.95);
+}
+
+.github-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.github-tooltip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* color: #fff; */
+  background: var(--hover-text);
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 12px;
+  top: 100%;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.6, 0.4, 0, 1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.github-wrapper:hover .github-tooltip {
+  top: 0;
+  opacity: 1;
+}
+
+.github-wrapper:hover .github-icon {
+  opacity: 0;
+}
+
+.github-wrapper:hover {
+  transform: scale(1.05);
 }
 
 .menu {

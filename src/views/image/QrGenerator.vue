@@ -137,6 +137,56 @@
             </div>
           </div>
 
+
+
+        </el-card>
+
+        <!-- 快速模板 -->
+        <el-card class="template-card" style="margin-top: 20px;">
+          <template #header>
+            <div class="card-header">
+              <span>快速模板</span>
+            </div>
+          </template>
+          
+          <div class="template-buttons">
+            <el-button 
+              size="small" 
+              @click="applyTemplate('wifi')"
+              type="primary"
+              plain
+            >
+              <el-icon><Connection /></el-icon>
+              WiFi 信息
+            </el-button>
+            <el-button 
+              size="small" 
+              @click="applyTemplate('contact')"
+              type="success"
+              plain
+            >
+              <el-icon><User /></el-icon>
+              联系人
+            </el-button>
+            <el-button 
+              size="small" 
+              @click="applyTemplate('sms')"
+              type="warning"
+              plain
+            >
+              <el-icon><ChatDotSquare /></el-icon>
+              短信
+            </el-button>
+            <el-button 
+              size="small" 
+              @click="applyTemplate('email')"
+              type="info"
+              plain
+            >
+              <el-icon><Message /></el-icon>
+              邮件
+            </el-button>
+          </div>
         </el-card>
       </el-col>
       
@@ -189,53 +239,72 @@
           </div>
         </el-card>
         
-        <!-- 快速模板 -->
-        <el-card class="template-card" style="margin-top: 20px;">
+        <!-- Logo 设置 -->
+        <el-card class="logo-card" style="margin-top: 20px;">
           <template #header>
             <div class="card-header">
-              <span>快速模板</span>
+              <span>Logo 设置</span>
             </div>
           </template>
           
-          <div class="template-buttons">
-            <el-button 
-              size="small" 
-              @click="applyTemplate('wifi')"
-              type="primary"
-              plain
+          <div class="logo-upload-section">
+            <el-upload
+              v-model:file-list="logoFileList"
+              :limit="1"
+              :auto-upload="false"
+              :on-change="handleLogoChange"
+              :on-remove="handleLogoRemove"
+              accept="image/*"
+              drag
+              class="logo-upload"
             >
-              <el-icon><Wifi /></el-icon>
-              WiFi 信息
-            </el-button>
-            <el-button 
-              size="small" 
-              @click="applyTemplate('contact')"
-              type="success"
-              plain
-            >
-              <el-icon><User /></el-icon>
-              联系人
-            </el-button>
-            <el-button 
-              size="small" 
-              @click="applyTemplate('sms')"
-              type="warning"
-              plain
-            >
-              <el-icon><ChatDotSquare /></el-icon>
-              短信
-            </el-button>
-            <el-button 
-              size="small" 
-              @click="applyTemplate('email')"
-              type="info"
-              plain
-            >
-              <el-icon><Message /></el-icon>
-              邮件
-            </el-button>
+              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+              <div class="el-upload__text">
+                将Logo图片拖到此处，或<em>点击上传</em>
+              </div>
+              <template #tip>
+                <div class="el-upload__tip">
+                  支持 JPG、PNG 格式，建议使用正方形图片，文件大小不超过5MB
+                </div>
+              </template>
+            </el-upload>
+            
+            <div v-if="logoSettings.imageUrl" class="logo-preview-section">
+              <div class="logo-preview-container">
+                <img :src="logoSettings.imageUrl" alt="Logo预览" class="logo-preview-image" />
+              </div>
+              
+              <div class="logo-controls">
+                <div class="control-item">
+                  <label class="form-label">Logo大小：{{ logoSettings.size }}%</label>
+                  <el-slider
+                    v-model="logoSettings.size"
+                    :min="10"
+                    :max="50"
+                    :step="5"
+                    show-stops
+                    @change="generateQrCode"
+                  />
+                  <div class="form-tip">调整Logo相对于二维码的大小比例</div>
+                </div>
+                
+                <div class="control-item">
+                  <label class="form-label">透明度：{{ logoSettings.opacity }}%</label>
+                  <el-slider
+                    v-model="logoSettings.opacity"
+                    :min="10"
+                    :max="100"
+                    :step="10"
+                    show-stops
+                    @change="generateQrCode"
+                  />
+                  <div class="form-tip">调整Logo的透明度</div>
+                </div>
+              </div>
+            </div>
           </div>
         </el-card>
+
       </el-col>
     </el-row>
     
@@ -312,6 +381,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import QRCode from 'qrcode'
+import { ElMessage } from 'element-plus'
+import { 
+  Download, 
+  Loading, 
+  DocumentAdd, 
+  Connection, 
+  User, 
+  ChatDotSquare, 
+  Message,
+  UploadFilled
+} from '@element-plus/icons-vue'
 
 // 响应式数据
 const qrText = ref('')
@@ -328,6 +408,16 @@ const qrSettings = ref({
   },
   errorCorrectionLevel: 'M'
 })
+
+// Logo设置
+const logoSettings = ref({
+  imageUrl: '',
+  size: 20, // Logo大小比例 (10-50%)
+  opacity: 90 // 透明度 (10-100%)
+})
+
+// Logo文件列表
+const logoFileList = ref([])
 
 // 错误纠正级别映射
 const errorCorrectionLevels = ['L', 'M', 'Q', 'H']
@@ -376,13 +466,109 @@ const generateQrCode = async () => {
       errorCorrectionLevel: qrSettings.value.errorCorrectionLevel
     }
     
-    qrDataUrl.value = await QRCode.toDataURL(qrText.value, options)
+    // 生成基础二维码
+    const baseQrDataUrl = await QRCode.toDataURL(qrText.value, options)
+    
+    // 如果有Logo，则叠加Logo
+    if (logoSettings.value.imageUrl) {
+      qrDataUrl.value = await addLogoToQrCode(baseQrDataUrl)
+    } else {
+      qrDataUrl.value = baseQrDataUrl
+    }
   } catch (error) {
     console.error('生成二维码失败:', error)
     qrDataUrl.value = ''
   } finally {
     loading.value = false
   }
+}
+
+// 在二维码上叠加Logo
+const addLogoToQrCode = (qrDataUrl) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    const qrImage = new Image()
+    qrImage.onload = () => {
+      // 设置画布大小
+      canvas.width = qrImage.width
+      canvas.height = qrImage.height
+      
+      // 绘制二维码
+      ctx.drawImage(qrImage, 0, 0)
+      
+      // 创建Logo图片
+      const logoImage = new Image()
+      logoImage.onload = () => {
+        // 计算Logo尺寸和位置
+        const logoSize = (qrImage.width * logoSettings.value.size) / 100
+        const logoX = (qrImage.width - logoSize) / 2
+        const logoY = (qrImage.height - logoSize) / 2
+        
+        // 设置透明度
+        ctx.globalAlpha = logoSettings.value.opacity / 100
+        
+        // 在Logo周围绘制白色背景（提高识别率）
+        const bgPadding = logoSize * 0.1
+        ctx.globalAlpha = 1
+        ctx.fillStyle = qrSettings.value.color.light
+        ctx.fillRect(
+          logoX - bgPadding,
+          logoY - bgPadding,
+          logoSize + bgPadding * 2,
+          logoSize + bgPadding * 2
+        )
+        
+        // 绘制Logo
+        ctx.globalAlpha = logoSettings.value.opacity / 100
+        ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize)
+        
+        // 重置透明度
+        ctx.globalAlpha = 1
+        
+        // 返回合成后的图片
+        resolve(canvas.toDataURL('image/png'))
+      }
+      logoImage.src = logoSettings.value.imageUrl
+    }
+    qrImage.src = qrDataUrl
+  })
+}
+
+// 处理Logo文件上传
+const handleLogoChange = (uploadFile) => {
+  const file = uploadFile.raw
+  if (!file) return
+  
+  // 验证文件类型
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  
+  // 验证文件大小
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  
+  // 读取文件并转换为base64
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    logoSettings.value.imageUrl = e.target.result
+    generateQrCode()
+  }
+  reader.readAsDataURL(file)
+}
+
+// 移除Logo
+const handleLogoRemove = () => {
+  logoSettings.value.imageUrl = ''
+  logoFileList.value = []
+  generateQrCode()
 }
 
 // 下载二维码
@@ -715,6 +901,17 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+/* 模板卡片样式 */
+.template-card {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  transition: box-shadow 0.3s ease;
+}
+
+.template-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
 .template-buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -832,6 +1029,101 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+/* Logo卡片样式 */
+.logo-card {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  transition: box-shadow 0.3s ease;
+}
+
+.logo-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Logo上传样式 */
+.logo-upload-section {
+  padding: 0;
+}
+
+.logo-upload {
+  margin-bottom: 16px;
+}
+
+.logo-upload .el-upload-dragger {
+  width: 100%;
+  height: 120px;
+  border: 2px dashed #dcdfe6;
+  border-radius: 8px;
+  background-color: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.logo-upload .el-upload-dragger:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.logo-upload .el-icon--upload {
+  font-size: 32px;
+  color: #8c939d;
+  margin-bottom: 8px;
+}
+
+.logo-upload .el-upload__text {
+  color: #606266;
+  font-size: 14px;
+  text-align: center;
+}
+
+.logo-upload .el-upload__text em {
+  color: #409eff;
+  font-style: normal;
+}
+
+.logo-upload .el-upload__tip {
+  color: #8c939d;
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.logo-preview-section {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.logo-preview-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.logo-preview-image {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background-color: #fff;
+}
+
+.logo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-item .form-label {
+  margin-bottom: 8px;
+}
+
 .color-input {
   flex: 1;
   min-width: 110px;
@@ -862,6 +1154,10 @@ onMounted(() => {
   
   .page-title {
     font-size: 24px;
+  }
+  
+  .logo-card, .template-card {
+    margin-top: 16px !important;
   }
   
   .template-buttons {

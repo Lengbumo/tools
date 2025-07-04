@@ -48,7 +48,11 @@
 
 - **功能描述**: 智能图片压缩和格式转换，支持批量处理
 
-#### 4. OCR 识别 (`/image/ocr-recognition`)
+#### 4. 二维码生成器 (`/image/qr-generator`) ✨ **更新功能**
+
+- **功能描述**: 在线生成自定义二维码，支持文本、网址等内容
+
+#### 5. OCR 识别 (`/image/ocr-recognition`)
 
 - **功能描述**: 图片文字识别和提取
 - **开发状态**: 开发中
@@ -153,10 +157,7 @@ npm run preview
 
 ```bash
 # 直接拉取并启动预构建镜像
-docker run -d -p 80:3000 --name tools-app ghcr.io/lengbumo/tools:latest
-
-# 或者直接启动
-docker-compose -f docker-compose.yml up -d
+docker run -d -p 8999:80 --name tools-app lengbumo/tools:latest
 ```
 
 ## 🤝 贡献指南
@@ -186,5 +187,30 @@ docker-compose -f docker-compose.yml up -d
 - [ ] 引入 Web Workers 优化大文件处理性能
 - [ ] 实现 PWA 支持，提供离线使用能力
 - [ ] 优化构建配置，减少包体积
+
+## 🆕 最新更新
+
+### v1.2.0 - 二维码生成器功能增强
+
+**新增功能**:
+
+- ✨ 二维码生成器新增 Logo 导入功能，支持自定义品牌标识
+- 🎨 可调节 Logo 大小比例（10%-50%），适配不同需求
+- 🔧 可调节 Logo 透明度（10%-100%），实现完美视觉效果
+- 🛡️ 自动在 Logo 周围添加背景保护，确保二维码识别率
+- 📁 支持拖拽上传，操作更加便捷
+
+**技术改进**:
+
+- 🎯 使用 Canvas API 实现 Logo 与二维码的完美融合
+- 📊 优化图片处理算法，确保输出质量
+- 🔍 增强文件上传验证，支持多种图片格式
+- 💾 保持原有下载功能，支持带 Logo 的二维码导出
+
+**代码质量**:
+
+- 📚 更新项目文档，详细说明新增功能特性
+- 🔧 保持代码结构清晰，遵循组件化开发原则
+- ✅ 完善错误处理和用户体验优化
 
 ---
