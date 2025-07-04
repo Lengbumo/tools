@@ -29,7 +29,7 @@ RUN npm install -g serve
 COPY --from=builder /app/dist ./dist
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 80
 
 # 启动静态文件服务器，支持SPA路由
-CMD ["serve", "-s", "dist", "-l", "3000"] 
+CMD ["serve", "-s", "dist", "-l", "80"] 
