@@ -50,6 +50,56 @@ interface ReadFileResult {
 
 class JsonUtils {
   /**
+   * 检查是否在浏览器环境中
+   */
+  private static isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof document !== 'undefined';
+  }
+
+  /**
+   * 安全的JSON解析，带有更好的错误信息
+   */
+  private static safeJsonParse(jsonString: string): { success: boolean; data?: any; error?: string; position?: { line: number; column: number; snippet: string } } {
+    try {
+      const data = JSON.parse(jsonString);
+      return { success: true, data };
+    } catch (error: any) {
+      // 尝试从原生JSON.parse错误中提取位置信息
+      const position = this.parseErrorMessage(jsonString, error.message);
+      return { 
+        success: false, 
+        error: this.formatNativeError(error.message),
+        position 
+      };
+    }
+  }
+
+  /**
+   * 格式化原生JSON错误信息
+   */
+  private static formatNativeError(errorMessage: string): string {
+    // 常见的JSON错误信息转换为更友好的中文
+    const errorMap: { [key: string]: string } = {
+      'Unexpected token': '意外的字符',
+      'Unexpected end of JSON input': 'JSON 输入意外结束',
+      'Expected property name': '期望属性名',
+      'Expected double-quoted property name': '期望双引号包围的属性名',
+      'Trailing comma': '末尾逗号',
+      'Duplicate property': '重复属性'
+    };
+
+    let formattedError = errorMessage;
+    for (const [key, value] of Object.entries(errorMap)) {
+      if (errorMessage.includes(key)) {
+        formattedError = formattedError.replace(key, value);
+        break;
+      }
+    }
+
+    return formattedError;
+  }
+
+  /**
    * 创建错误片段，只显示错误位置附近的内容
    * @param errorLine - 错误所在行
    * @param column - 错误列位置
@@ -184,6 +234,28 @@ class JsonUtils {
         };
       }
       
+      // 尝试从原生JSON.parse错误中提取位置信息
+      const nativeMatch = errorMessage.match(/JSON.*position\s+(\d+)/i);
+      if (nativeMatch) {
+        const position = parseInt(nativeMatch[1], 10);
+        const lines = jsonString.substring(0, position).split('\n');
+        const line = lines.length;
+        const column = lines[lines.length - 1].length + 1;
+        
+        // 获取错误行的上下文
+        const allLines = jsonString.split('\n');
+        const errorLine = allLines[line - 1] || '';
+        
+        // 创建错误片段
+        const snippet = this.createErrorSnippet(errorLine, column);
+        
+        return {
+          line,
+          column,
+          snippet
+        };
+      }
+      
       return undefined;
     } catch (e) {
       return undefined;
@@ -198,42 +270,23 @@ class JsonUtils {
    */
   static formatErrorMessage(jsonString: string, error: any): { message: string; position?: { line: number; column: number; snippet: string } } {
     const errorMessage = error.message || String(error);
+    
+    // 格式化错误消息
+    let formattedMessage = this.formatNativeError(errorMessage);
+    
+    // 尝试解析错误位置
     const position = this.parseErrorMessage(jsonString, errorMessage);
     
-    let message = errorMessage;
-    
-    // 美化错误信息
-    if (position) {
-      message = `在第 ${position.line} 行第 ${position.column} 列发生解析错误`;
-      
-      // 添加可能的错误原因
-      if (errorMessage.includes('Expected')) {
-        const expectedMatch = errorMessage.match(/Expected\s+([^,]+)/i);
-        const gotMatch = errorMessage.match(/got\s+([^,]+)/i);
-        
-        if (expectedMatch && gotMatch) {
-          message += `\n此处缺少 ${expectedMatch[1]} 字符, 实际上却是 ${gotMatch[1]}`;
-        }
-      } else if (errorMessage.includes('Unexpected')) {
-        const unexpectedMatch = errorMessage.match(/Unexpected\s+([^,]+)/i);
-        
-        if (unexpectedMatch) {
-          message += `\n此处出现了意外的 ${unexpectedMatch[1]} 字符`;
-        }
-      } else if (errorMessage.includes('end of input')) {
-        message += '\n输入不完整，可能缺少结束括号或引号';
-      } else if (errorMessage.includes('token')) {
-        message += '\n存在无效的 JSON 标记';
-      }
-    }
-    
-    return { message, position };
+    return {
+      message: formattedMessage,
+      position
+    };
   }
 
   /**
    * 格式化 JSON 字符串
    * @param jsonString - 要格式化的 JSON 字符串
-   * @param indent - 缩进空格数，默认为 2
+   * @param indent - 缩进大小，默认为 2
    * @returns - 包含格式化后的 JSON 字符串和可能的错误信息
    */
   static format(jsonString: string, indent: number = 2): FormatResult {
@@ -245,16 +298,25 @@ class JsonUtils {
         };
       }
       
-      // 解析 JSON 字符串
-      const parsedJson = JSON.parse(jsonString);
+      // 使用安全的JSON解析
+      const parseResult = this.safeJsonParse(jsonString);
+      
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: parseResult.error || '未知错误',
+          formattedJson: '',
+          errorPosition: parseResult.position
+        };
+      }
       
       // 格式化 JSON
-      const formattedJson = JSON.stringify(parsedJson, null, indent);
+      const formattedJson = JSON.stringify(parseResult.data, null, indent);
       
       return {
         success: true,
         formattedJson,
-        parsedJson
+        parsedJson: parseResult.data
       };
     } catch (error: any) {
       const { message, position } = this.formatErrorMessage(jsonString, error);
@@ -282,16 +344,25 @@ class JsonUtils {
         };
       }
       
-      // 解析 JSON 字符串
-      const parsedJson = JSON.parse(jsonString);
+      // 使用安全的JSON解析
+      const parseResult = this.safeJsonParse(jsonString);
+      
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: parseResult.error || '未知错误',
+          compressedJson: '',
+          errorPosition: parseResult.position
+        };
+      }
       
       // 压缩 JSON（不包含空格）
-      const compressedJson = JSON.stringify(parsedJson);
+      const compressedJson = JSON.stringify(parseResult.data);
       
       return {
         success: true,
         compressedJson,
-        parsedJson
+        parsedJson: parseResult.data
       };
     } catch (error: any) {
       const { message, position } = this.formatErrorMessage(jsonString, error);
@@ -319,8 +390,16 @@ class JsonUtils {
         };
       }
       
-      // 尝试解析 JSON 字符串
-      JSON.parse(jsonString);
+      // 使用安全的JSON解析
+      const parseResult = this.safeJsonParse(jsonString);
+      
+      if (!parseResult.success) {
+        return {
+          valid: false,
+          error: parseResult.error || '未知错误',
+          errorPosition: parseResult.position
+        };
+      }
       
       return {
         valid: true

@@ -117,16 +117,43 @@ import 'codemirror/addon/fold/foldcode.js'
 import 'codemirror/addon/fold/foldgutter.js'
 import 'codemirror/addon/fold/brace-fold.js'
 import 'codemirror/addon/fold/foldgutter.css'
-import jsonlint from 'jsonlint'
 import JsonUtils from '@/utils/JsonUtils'
 
-// 为 jsonlint 提供全局访问
+// 为 CodeMirror 提供安全的 jsonlint 访问
 declare global {
   interface Window {
-    jsonlint: any;
+    jsonlint?: any;
   }
 }
-window.jsonlint = jsonlint
+
+// 安全初始化 jsonlint 用于 CodeMirror
+const initJsonlint = async () => {
+  try {
+    if (typeof window !== 'undefined') {
+      // 尝试动态导入 jsonlint
+      const jsonlintModule = await import('jsonlint');
+      const jsonlint = jsonlintModule.default || jsonlintModule;
+      window.jsonlint = jsonlint;
+    }
+  } catch (error) {
+    console.warn('jsonlint 模块加载失败，CodeMirror 将使用基础语法检查:', error);
+    // 提供一个最小的替代实现
+    if (typeof window !== 'undefined') {
+      window.jsonlint = {
+        parse: (text: string) => {
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            throw e;
+          }
+        }
+      };
+    }
+  }
+};
+
+// 初始化 jsonlint
+initJsonlint();
 
 // 编辑器选项接口
 interface EditorOptions {
